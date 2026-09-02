@@ -1,0 +1,13 @@
+# Python caches / build artifacts (backend subtree)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Secrets — never commit a real .env.
+# .env.example (template, no secrets) is explicitly allowed.
+.env
+.env.*
+!.env.example
