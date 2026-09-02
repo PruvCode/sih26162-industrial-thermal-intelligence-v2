@@ -1,0 +1,48 @@
+data:
+  raw_path: "../../data/raw/firms"
+  processed_path: "../../data/processed"
+features:
+  numeric:
+    - bright_ti4
+    - frp
+    - scan
+    - track
+    - confidence_score
+    - latitude
+    - longitude
+    - hour_of_day
+    - day_of_week
+    - month
+    - proximity_to_industrial_km
+    - persistence_score
+    - historical_count
+    - avg_frp_nearby
+  categorical:
+    - satellite
+    - instrument
+    - daynight
+model:
+  type: xgboost
+  params:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.1
+    objective: multi:softmax
+    num_class: 4
+labels:
+  - industrial_fire
+  - persistent_thermal_source
+  - natural_or_wildfire
+  - other
+training:
+  test_size: 0.2
+  val_size: 0.1
+  random_state: 42
+  cv_folds: 5
+evaluation:
+  metrics:
+    - accuracy
+    - precision
+    - recall
+    - f1
+    - confusion_matrix
