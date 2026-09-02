@@ -1,0 +1,421 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fonts are loaded by next/font in app/layout.tsx and exposed as
+   --font-cormorant / --font-inter / --font-jetbrains-mono. Nothing is imported
+   from fonts.googleapis.com at runtime — see layout.tsx for why. */
+
+:root {
+  /* ── Backgrounds ─────────────────────────── */
+  --bg-void: #05070B;
+  --bg-deep: #0A0F17;
+  --bg-primary: #0F172A;
+  --bg-surface: #1E293B;
+  --bg-elevated: #334155;
+  --bg-glass: rgba(15, 23, 42, 0.55);
+
+  /* ── Borders ─────────────────────────────── */
+  --border-subtle: rgba(255, 255, 255, 0.06);
+  --border-default: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.16);
+
+  /* ── Text ────────────────────────────────── *
+   * `muted` and `disabled` were #64748B / #475569 on near-black, which sits
+   * at 2.3–3.5:1 — below WCAG AA for the 9–10px labels they were used on.
+   * Lifted until every tier clears 4.5:1 against --bg-void #05070B.          */
+  --text-primary: #F8FAFC;
+  --text-secondary: #A9B6C6;
+  --text-muted: #8798AC;
+  --text-disabled: #6B7C90;
+
+  /* ── Accent ──────────────────────────────── */
+  --accent-cyan: #00D9FF;
+  --accent-green: #22C55E;
+
+  /* ── Thermal ─────────────────────────────── */
+  --thermal-red: #EF4444;
+  --thermal-orange: #F97316;
+  --thermal-yellow: #FACC15;
+
+  /* ── Severity ────────────────────────────── */
+  --severity-fire: #EF4444;
+  --severity-persistent: #F97316;
+  --severity-wildfire: #FACC15;
+  --severity-other: #64748B;
+
+  /* ── Fonts ───────────────────────────────── */
+  /* The *-loaded variables are injected by next/font in app/layout.tsx. These
+     composite variables are the single source of truth: globals.css, the
+     Tailwind font-* utilities and every component read them. */
+  --font-display: var(--font-cormorant), Georgia, serif;
+  --font-body: var(--font-inter), system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), 'Fira Code', monospace;
+
+  /* ── Timing ──────────────────────────────── */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* ── Spacing ─────────────────────────────── */
+  --space-unit: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  /* Deliberately NOT `scroll-behavior: smooth`. With a scroll-driven camera,
+     the browser's own smooth scrolling animates the scroll position on its own
+     clock and fights the rAF loop, producing visible stutter and a camera that
+     lags the input. All programmatic scrolling uses explicit behaviour. */
+  scroll-behavior: auto;
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg-void);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  /* `cursor: none` is applied by CustomCursor at runtime, and only for users
+     who have not asked for reduced motion. Hard-coding it in CSS left those
+     users with no visible pointer at all. */
+}
+
+::selection {
+  background: rgba(0, 217, 255, 0.15);
+  color: var(--text-primary);
+}
+
+/* ── Focus ──────────────────────────────────── *
+ * Keyboard users must be able to see where they are. `:focus-visible` only,
+ * so mouse clicks do not leave rings behind.                                */
+
+:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The custom cursor hides the native pointer for motion-tolerant users; the
+   body rule must never be in CSS or reduced-motion users lose the pointer. */
+
+/* ── Map depth ──────────────────────────────── *
+ * Three planes: background (geography), midground (events + infrastructure),
+ * foreground (intelligence UI). The vignette and edge contrast are what keep
+ * the floating panels reading as suspended above the surface.                */
+
+.map-depth-foreground {
+  background:
+    radial-gradient(ellipse 74% 66% at 50% 46%, transparent 42%, rgba(4, 6, 10, 0.34) 80%, rgba(4, 6, 10, 0.62) 100%);
+}
+
+.map-depth-top {
+  background: linear-gradient(180deg, rgba(4, 6, 10, 0.58) 0%, rgba(4, 6, 10, 0.12) 55%, transparent 100%);
+}
+
+.map-depth-bottom {
+  background: linear-gradient(0deg, rgba(4, 6, 10, 0.62) 0%, rgba(4, 6, 10, 0.15) 60%, transparent 100%);
+}
+
+/* ── Scrollbar ─────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ── Glass System ──────────────────────────── */
+
+@layer components {
+  .glass {
+    background: var(--bg-glass);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    border: 1px solid var(--border-subtle);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 4px 16px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-hover {
+    transition: all 0.3s var(--ease-out-expo);
+  }
+  .glass-hover:hover {
+    background: rgba(15, 23, 42, 0.7);
+    border-color: var(--border-default);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+
+  .glass-elevated {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(32px) saturate(1.3);
+    -webkit-backdrop-filter: blur(32px) saturate(1.3);
+    border: 1px solid var(--border-default);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 16px 48px rgba(0, 0, 0, 0.2),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+
+  .glass-panel {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(28px) saturate(1.2);
+    -webkit-backdrop-filter: blur(28px) saturate(1.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.5),
+      0 4px 16px rgba(0, 0, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-nav {
+    background: rgba(5, 7, 11, 0.7);
+    backdrop-filter: blur(20px) saturate(1.1);
+    -webkit-backdrop-filter: blur(20px) saturate(1.1);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+}
+
+/* ── Typography Scale ──────────────────────── */
+
+@layer components {
+  .type-display {
+    font-family: var(--font-display);
+    font-weight: 400;
+    color: var(--text-primary);
+  }
+
+  .type-body {
+    font-family: var(--font-body);
+    color: var(--text-secondary);
+  }
+
+  .type-mono {
+    font-family: var(--font-mono);
+    color: var(--text-secondary);
+  }
+
+  .label-xs {
+    font-family: var(--font-mono);
+    font-size: 0.5625rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .label-sm {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    letter-spacing: 0.10em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .section-label {
+    @apply label-xs;
+  }
+
+  .technical-text {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    color: var(--text-muted);
+    letter-spacing: 0.04em;
+  }
+}
+
+/* ── Animation Keyframes ───────────────────── */
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes barFill {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.15); opacity: 0.15; }
+  100% { transform: scale(1); opacity: 0.5; }
+}
+
+@keyframes thermalPulse {
+  0%, 100% { box-shadow: 0 0 8px var(--thermal-red); }
+  50% { box-shadow: 0 0 16px var(--thermal-red); }
+}
+
+@keyframes scanLine {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+@keyframes statusPulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes statusBreath {
+  0%, 100% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.8); opacity: 0; }
+}
+
+@keyframes scrollDrift {
+  0% { transform: translateY(-100%); opacity: 0; }
+  30% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes reportIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@layer utilities {
+  .animate-fade-in-up {
+    animation: fadeInUp 0.7s var(--ease-out-expo) both;
+  }
+  .animate-slide-in-right {
+    animation: slideInRight 0.6s var(--ease-out-expo) both;
+  }
+  .animate-bar-fill {
+    animation: barFill 0.8s var(--ease-out-expo) both;
+    transform-origin: left;
+  }
+  .animate-fade-in {
+    animation: fadeIn 0.5s var(--ease-out-expo) both;
+  }
+  .animate-pulse-ring {
+    animation: pulseRing 2.5s var(--ease-out-expo) infinite;
+  }
+}
+
+/* ── MapLibre Overrides ────────────────────── */
+
+.maplibregl-popup-content {
+  background: rgba(15, 23, 42, 0.9) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  color: var(--text-primary) !important;
+  font-family: var(--font-body) !important;
+  font-size: 11px !important;
+  padding: 10px 14px !important;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: rgba(15, 23, 42, 0.9) !important;
+}
+
+.maplibregl-ctrl-group {
+  background: rgba(15, 23, 42, 0.8) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 8px !important;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.maplibregl-ctrl-group button {
+  background: transparent !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  color: var(--text-secondary) !important;
+}
+
+.maplibregl-ctrl-group button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.maplibregl-ctrl-group button span {
+  filter: invert(0.6) !important;
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgba(5, 7, 11, 0.5) !important;
+  color: var(--text-disabled) !important;
+  font-size: 9px !important;
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--text-muted) !important;
+}
+
+/* ── Global Utilities ──────────────────────── */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ── Loading Screen ────────────────────────── */
+
+@keyframes loadingBar {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+@keyframes loadingDot {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1; }
+  80%, 100% { opacity: 0; }
+}
+
+/* ── Reduced Motion ────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
