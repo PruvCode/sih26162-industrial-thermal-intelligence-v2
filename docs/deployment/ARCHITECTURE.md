@@ -7,7 +7,7 @@ running; it explains how the pieces fit and where the long-running work actually
 
 | Component | Tech | Repo path | Deploy target |
 |---|---|---|---|
-| Frontend | Next.js 14 (App Router), `output: standalone` | `apps/web` | Vercel (preferred) or Docker behind nginx |
+| Frontend | Next.js 14 (App Router); `output: 'standalone'` only for Docker | `apps/web` | Vercel (preferred) or Docker behind nginx |
 | Backend API | FastAPI + Uvicorn | `apps/api` | Docker container (any orchestrator) |
 | Relational DB | PostgreSQL 16 + PostGIS 3.4 | — | Managed Postgres / container volume |
 | Cache / queue | Redis 7 | — | Container / managed |
@@ -86,4 +86,30 @@ Backend health: `GET /api/v1/health` (liveness, always 200) and
 - [ ] Ingestion worker scheduled (FIRMS + OSM).
 - [ ] (Optional) trained model behind `ML_SERVICE_URL`; set `ML_FAIL_OPEN=false` in prod once
       the model is trusted.
+
+## 7. Vercel (frontend) configuration
+
+The repo is a monorepo: the root `pyproject.toml` makes Vercel auto-detect it as a **Python**
+project, which fails the build (`No python entrypoint found`). The FastAPI backend needs
+PostGIS + Redis and is deployed on Docker — it must **not** be the Vercel entrypoint. The
+
+`vercel.json` at the repo root fixes this by scoping the build to the Next.js app:
+
+```json
+{ "rootDirectory": "apps/web", "framework": "nextjs",
+  "installCommand": "npm ci", "buildCommand": "npm run build" }
+```
+
+Notes:
+
+- Vercel builds `apps/web` in isolation. The frontend is provider-agnostic and defaults to
+  `demoProvider` (seeded offline data), so **no backend or API key is required at build time**.
+- `output: 'standalone'` in `next.config.js` is gated behind `STANDALONE_OUTPUT=1` so Vercel
+  uses its managed build output (a standalone build can interfere with Vercel deploys) while the
+  self-hosted `apps/web/Dockerfile` still produces `node server.js`.
+- To go live against the API, set `NEXT_PUBLIC_API_URL` in the Vercel project env (or per the
+  checklist item above). Omit it to ship the demo experience.
+- Confirm the Vercel project's connected Git repository is exactly
+  `PruvCode/sih26162-industrial-thermal-intelligence-v2` on branch `main`; a name mismatch (e.g.
+  a `-deploy` suffixed repo) means Vercel is building a different source and this file won't apply.
 - [ ] Health probes wired to `/health` + `/health/ready`.
