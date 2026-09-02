@@ -1,6 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // `output: 'standalone'` produces a self-contained server used by the
+  // self-hosted Dockerfile (`node server.js`). Vercel manages its own build
+  // output and a standalone build can interfere with it, so we only enable
+  // it for container deploys — set STANDALONE_OUTPUT=1 in the Dockerfile.
+  ...(process.env.STANDALONE_OUTPUT === '1' ? { output: 'standalone' } : {}),
   experimental: {
     optimizePackageImports: ['lucide-react'],
   },
