@@ -1,0 +1,100 @@
+name: Feature Request
+description: Propose a new feature or enhancement
+title: "[FEAT] "
+labels: ["feature", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for proposing a feature! Please describe your idea below.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: One-line summary of the feature
+      placeholder: e.g., Add Sentinel-3 SLSTR confirmation layer
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - api (FastAPI backend)
+        - web (Next.js frontend)
+        - ml (ML pipeline)
+        - gis (GIS utilities)
+        - database (Migrations/Schema)
+        - ingestion (Data pipeline)
+        - infra (Docker/CI/CD)
+        - docs (Documentation)
+        - other
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this solve? Why is it needed?
+      placeholder: |
+        Currently we only use FIRMS data. Adding Sentinel-3 SLSTR would provide independent confirmation of fire detections, reducing false positives.
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: How should this be implemented?
+      placeholder: |
+        1. Add Sentinel-3 client to ingestion pipeline
+        2. Query SLSTR FRP product for event locations ±3h
+        3. Cross-match with FIRMS detections (1km, 3h window)
+        4. Boost confidence for matched events
+        5. Add "confirmed_by_slstr" flag to evidence
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Other approaches you've considered
+      placeholder: |
+        - Use GOES geostationary instead (lower spatial resolution)
+        - Skip confirmation layer, rely on ML only
+    validations:
+      required: false
+  - type: textarea
+    id: implementation
+    attributes:
+      label: Implementation Notes
+      description: Technical details, API changes, schema changes, dependencies
+      placeholder: |
+        - New dependency: sentinelhub-py
+        - New env vars: SENTINEL_HUB_CLIENT_ID, SENTINEL_HUB_CLIENT_SECRET
+        - Database: Add slstr_match boolean to thermal_events
+        - API: Add slstr_confirmed field to event response
+    validations:
+      required: false
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 (Critical for SIH demo)
+        - P1 (High - next sprint)
+        - P2 (Medium - post-SIH)
+        - P3 (Low - nice to have)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have checked existing issues/PRs for similar features
+          required: true
+        - label: This aligns with SIH26162 problem statement
+          required: true
+        - label: I can contribute to implementation
+          required: false

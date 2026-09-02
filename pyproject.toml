@@ -1,0 +1,69 @@
+[project]
+name = "sih26162-thermal-intelligence"
+version = "0.1.0"
+description = "AI-Based Detection and Classification of Industrial Fires and Persistent Thermal Sources Using NASA FIRMS, OSM & Satellite Data"
+requires-python = ">=3.11"
+license = "MIT"
+readme = "README.md"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+src = ["apps", "ml"]
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "A",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T20",  # flake8-print
+    "SIM",  # flake8-simplify
+    "TCH",  # flake8-type-checking
+    "RUF",  # ruff-specific
+]
+ignore = ["T201"]  # allow print() in scripts and notebooks
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+plugins = ["sqlalchemy.ext.mypy.plugin", "pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["apps/api/tests", "ml/tests"]
+pythonpath = ["apps/api", "ml"]
+addopts = "-v --tb=short --strict-markers"
+markers = [
+    "slow: marks tests as slow",
+    "integration: marks integration tests",
+    "ml: marks ML model tests",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/api/scripts/*" = ["T201"]
+"ml/scripts/*" = ["T201"]

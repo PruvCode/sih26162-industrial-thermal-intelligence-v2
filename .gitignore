@@ -1,0 +1,135 @@
+# === Environment & Secrets (FIRST — never commit real secrets) ===
+.env
+.env.*
+!.env.example
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+sdist/
+wheels/
+*.whl
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+*.profiling/
+
+# === Virtual Envs ===
+.venv/
+venv/
+ENV/
+env/
+
+# === Data Science / ML Artifacts ===
+ml/artifacts/*.pkl
+ml/artifacts/*.joblib
+ml/artifacts/*.h5
+ml/artifacts/*.pt
+ml/artifacts/*.pth
+ml/artifacts/*.onnx
+ml/artifacts/*.tflite
+ml/artifacts/*.pb
+ml/artifacts/*.bin
+ml/artifacts/*.safetensors
+ml/models/trained/
+ml/models/checkpoints/
+ml/data/processed/
+ml/data/interim/
+ml/wandb/
+ml/runs/
+ml/.neptune/
+
+# === Raw & Large Data (use DVC or Git LFS) ===
+data/raw/*
+data/external/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/external/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+*.csv
+*.tsv
+*.parquet
+*.feather
+*.arrow
+*.hdf5
+*.h5
+*.nc
+*.tif
+*.tiff
+*.geotiff
+
+# === Node.js ===
+node_modules/
+.next/
+out/
+.nuxt/
+dist/
+.npm
+.yarn-integrity
+yarn-error.log*
+pnpm-debug.log*
+# NOTE: package-lock.json IS tracked (apps/web) for reproducible frontend builds.
+yarn.lock
+
+# === TypeScript ===
+*.tsbuildinfo
+
+# === IDE ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# === Docker ===
+docker-compose.override.yml
+
+# === Logs ===
+*.log
+logs/
+npm-debug.log*
+
+# === Jupyter ===
+.ipynb_checkpoints/
+*.ipynb
+
+# === Secrets / certs ===
+*.pem
+*.key
+*.p12
+*.crt
+secrets/
+
+# === Misc ===
+.cache/
+tmp/
+temp/
+*.bak
+*.orig

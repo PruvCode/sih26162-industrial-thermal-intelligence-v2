@@ -1,0 +1,106 @@
+# docker-compose.yml — SIH26162 Industrial Thermal Intelligence
+#
+# Full local stack: PostGIS (db), Redis (cache/queue), FastAPI backend (api),
+# Next.js frontend (web). An optional `nginx` reverse proxy is available via
+# the `proxy` profile: `docker compose --profile proxy up`.
+#
+# Schema: Alembic is the single source of truth. The API runs
+# `alembic upgrade head` on boot, so DO NOT mount raw SQL (database/migrations,
+# database/seeds) into the Postgres initdb — that would race Alembic and fail.
+# For demo data, once the API is healthy run:
+#     curl -X POST http://localhost:8000/api/v1/admin/seed
+# (development only) or apply database/seeds/*.sql manually after migrations.
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: sih26162-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sih26162}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sih26162}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - sih26162-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sih26162-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - sih26162-network
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: sih26162-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-sih26162}
+      DATABASE_URL_SYNC: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-sih26162}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - sih26162-network
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    container_name: sih26162-web
+    restart: unless-stopped
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    networks:
+      - sih26162-network
+
+  nginx:
+    image: nginx:alpine
+    container_name: sih26162-nginx
+    profiles: ["proxy"]
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/docker/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - web
+    networks:
+      - sih26162-network
+
+networks:
+  sih26162-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

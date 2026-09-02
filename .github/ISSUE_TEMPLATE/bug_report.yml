@@ -1,0 +1,113 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: Brief one-line summary of the bug
+      placeholder: e.g., Map clustering flickers when zooming
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Detailed description of the bug
+      placeholder: |
+        What happened?
+        What did you expect to happen?
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of the system is affected?
+      options:
+        - api (FastAPI backend)
+        - web (Next.js frontend)
+        - ml (ML pipeline)
+        - gis (GIS utilities)
+        - database (Migrations/Schema)
+        - ingestion (Data pipeline)
+        - infra (Docker/CI/CD)
+        - docs (Documentation)
+        - other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version/Commit
+      description: Git commit hash or version where bug occurs
+      placeholder: e.g., a1b2c3d or v0.1.0
+    validations:
+      required: false
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Minimal steps to reproduce the bug
+      placeholder: |
+        1. Start dev server: `make dev`
+        2. Open http://localhost:3000
+        3. Zoom to Gujarat region
+        4. Observe flickering clusters
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should happen instead?
+      placeholder: Clusters should remain stable during zoom transitions
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happens?
+      placeholder: Clusters flicker/disappear/reappear during zoom
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs/Error Messages
+      description: Relevant logs, stack traces, or console output
+      render: shell
+      placeholder: |
+        [ERROR] 2024-01-15 10:30:00 - MapLibre: Layer update failed...
+    validations:
+      required: false
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - Critical (blocks development/production)
+        - High (major feature broken)
+        - Medium (minor feature broken, workaround exists)
+        - Low (cosmetic, minor annoyance)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues for duplicates
+          required: true
+        - label: I can reproduce this on the latest `develop` branch
+          required: true
+        - label: I have provided minimal reproduction steps
+          required: true

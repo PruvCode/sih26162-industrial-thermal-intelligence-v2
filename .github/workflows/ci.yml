@@ -1,0 +1,358 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: '3.11'
+  NODE_VERSION: '20'
+  POSTGRES_VERSION: '16'
+  POSTGIS_VERSION: '3.4'
+
+jobs:
+  # ============================================================
+  # Python Backend + ML
+  # ============================================================
+  backend:
+    name: Backend (API + ML)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: ./apps/api
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: sih26162_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sih26162_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: [6379:6379]
+        options: --health-cmd "redis-cli ping" --health-interval 10s --health-timeout 3s --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+          cache-dependency-path: |
+            apps/api/pyproject.toml
+            ml/pyproject.toml
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev
+
+      - name: Install API dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -U pip
+          .venv/bin/pip install -e ".[dev]"
+
+      - name: Install ML dependencies
+        working-directory: ./ml
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -U pip
+          .venv/bin/pip install -e ".[dev]"
+
+      - name: Run Ruff (lint)
+        run: .venv/bin/ruff check .
+
+      - name: Run Black (format check)
+        run: .venv/bin/black --check .
+
+      - name: Run MyPy (type check)
+        run: .venv/bin/mypy app
+
+      - name: Run API tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sih26162_test
+          REDIS_URL: redis://localhost:6379/0
+          APP_ENV: test
+        run: .venv/bin/pytest -v --cov=app --cov-report=xml --cov-report=term-missing
+
+      - name: Run ML tests
+        working-directory: ./ml
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sih26162_test
+        run: .venv/bin/pytest -v --cov=src --cov-report=xml
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./apps/api/coverage.xml,./ml/coverage.xml
+          flags: backend,ml
+
+  # ============================================================
+  # Frontend
+  # ============================================================
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: ./apps/web
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run Prettier (format check)
+        run: npm run format:check
+
+      - name: Run TypeScript type check
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm test -- --coverage
+
+      - name: Build Next.js
+        run: npm run build
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./apps/web/coverage/lcov.info
+          flags: frontend
+
+  # ============================================================
+  # Database Migration Test
+  # ============================================================
+  db-migration:
+    name: Database Migration Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./apps/api
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: sih26162_migration_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sih26162_migration_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -U pip
+          .venv/bin/pip install -e ".[dev]"
+
+      - name: Run migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sih26162_migration_test
+        run: .venv/bin/alembic upgrade head
+
+      - name: Verify schema
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sih26162_migration_test
+        run: |
+          .venv/bin/python -c "
+          import asyncio
+          from sqlalchemy.ext.asyncio import create_async_engine
+          from app.models import ThermalEvent, IndustrialSite, Classification
+          async def check():
+              engine = create_async_engine('postgresql+asyncpg://postgres:postgres@localhost:5432/sih26162_migration_test')
+              async with engine.begin() as conn:
+                  result = await conn.execute(\"SELECT tablename FROM pg_tables WHERE schemaname='public'\")
+                  tables = [row[0] for row in result]
+                  print('Tables:', tables)
+                  assert 'thermal_events' in tables
+                  assert 'industrial_sites' in tables
+                  assert 'classifications' in tables
+                  assert 'event_features' in tables
+                  assert 'historical_observations' in tables
+                  assert 'persistence_clusters' in tables
+              await engine.dispose()
+          asyncio.run(check())
+          "
+
+  # ============================================================
+  # Integration Tests
+  # ============================================================
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [backend, frontend, db-migration]
+    defaults:
+      run:
+        working-directory: ./tests/integration
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: sih26162_integration
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports: [5432:5432]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d sih26162_integration"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install test dependencies
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -U pip
+          .venv/bin/pip install pytest httpx pytest-asyncio
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sih26162_integration
+          API_BASE_URL: http://localhost:8000
+        run: .venv/bin/pytest -v
+
+  # ============================================================
+  # Security Scan
+  # ============================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run TruffleHog (secrets)
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+
+      - name: Run pip-audit (Python deps)
+        run: |
+          pip install pip-audit
+          pip-audit --requirement apps/api/pyproject.toml --requirement ml/pyproject.toml
+
+      - name: Run npm audit (Node deps)
+        working-directory: ./apps/web
+        run: npm audit --audit-level=high
+
+  # ============================================================
+  # Docker Build Test
+  # ============================================================
+  docker:
+    name: Docker Build Test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    if: github.event_name == 'push' || github.event.pull_request.base.ref == 'main'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/api
+          file: ./apps/api/Dockerfile
+          push: false
+          tags: sih26162/api:test
+          load: true
+
+      - name: Build Web image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./apps/web
+          file: ./apps/web/Dockerfile
+          push: false
+          tags: sih26162/web:test
+          load: true
+
+      - name: Test Docker Compose config
+        run: docker compose config --quiet
+
+  # ============================================================
+  # Summary
+  # ============================================================
+  summary:
+    name: CI Summary
+    runs-on: ubuntu-latest
+    needs: [backend, frontend, db-migration, integration, security, docker]
+    if: always()
+    steps:
+      - name: Check all jobs passed
+        run: |
+          echo "Backend: ${{ needs.backend.result }}"
+          echo "Frontend: ${{ needs.frontend.result }}"
+          echo "DB Migration: ${{ needs.db-migration.result }}"
+          echo "Integration: ${{ needs.integration.result }}"
+          echo "Security: ${{ needs.security.result }}"
+          echo "Docker: ${{ needs.docker.result }}"
+          
+          if [ "${{ needs.backend.result }}" != "success" ] || \
+             [ "${{ needs.frontend.result }}" != "success" ] || \
+             [ "${{ needs.db-migration.result }}" != "success" ] || \
+             [ "${{ needs.integration.result }}" != "success" ] || \
+             [ "${{ needs.security.result }}" != "success" ]; then
+            echo "::error::One or more required jobs failed"
+            exit 1
+          fi

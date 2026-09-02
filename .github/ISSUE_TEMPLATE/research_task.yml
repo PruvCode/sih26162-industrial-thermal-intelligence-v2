@@ -1,0 +1,95 @@
+name: Research Task
+description: Investigate a technical question or evaluate alternatives
+title: "[RESEARCH] "
+labels: ["research", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for technical spikes, literature reviews, or technology evaluations.
+  - type: input
+    id: question
+    attributes:
+      label: Research Question
+      description: Clear, specific question to answer
+      placeholder: e.g., "Which clustering algorithm (DBSCAN vs H3 vs ST-DBSCAN) best groups persistent thermal sources?"
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Context & Motivation
+      description: Why does this matter? What decision depends on the answer?
+      placeholder: |
+        We need to cluster thermal events into persistent sources. Current DBSCAN implementation has issues with varying density across urban/rural areas. Need to evaluate alternatives for production.
+    validations:
+      required: true
+  - type: textarea
+    id: deliverables
+    attributes:
+      label: Expected Deliverables
+      description: What should this research produce?
+      options:
+        - Comparison matrix (table)
+        - Prototype implementation
+        - Literature summary (markdown)
+        - Decision recommendation (ADR)
+        - Benchmark results
+      validations:
+        required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope & Constraints
+      description: Time box, resources, dependencies
+      placeholder: |
+        Time box: 2 days
+        Dependencies: None (can use synthetic data)
+        Must work with PostGIS + GeoPandas
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives to Evaluate
+      description: List specific options to compare
+      placeholder: |
+        1. DBSCAN (current) - eps=1km, min_samples=3
+        2. H3 hexagon binning - resolution 8 (~1km)
+        3. ST-DBSCAN - spatiotemporal variant
+        4. Custom: DBSCAN per land cover class
+    validations:
+      required: false
+  - type: textarea
+    id: success
+    attributes:
+      label: Success Criteria
+      description: How will we know the research is complete?
+      placeholder: |
+        - Clear recommendation with evidence
+        - Benchmark on 10k synthetic events
+        - ADR documenting decision
+        - Prototype in ml/src/features/clustering.py
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - P0 (Blocking current work)
+        - P1 (Needed this sprint)
+        - P2 (Nice to have this sprint)
+        - P3 (Future exploration)
+    validations:
+      required: true
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I will document findings in docs/research/ or docs/decisions/
+          required: true
+        - label: I will share results with team (meeting or async)
+          required: true
