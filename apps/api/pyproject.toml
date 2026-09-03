@@ -38,6 +38,14 @@ thermal-api = "app.main:create_app"
 requires = ["setuptools>=69.0"]
 build-backend = "setuptools.build_meta"
 
+# Flat layout (package is `app/` at the project root, not under src/). Modern
+# setuptools will not auto-discover packages for a flat layout and `pip install
+# -e .` fails ("setuptools will not proceed with this build"). Declare it
+# explicitly so the editable install — used by the Dockerfile and local venv —
+# works deterministically.
+[tool.setuptools]
+packages = ["app"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 100
