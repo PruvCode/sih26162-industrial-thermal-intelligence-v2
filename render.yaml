@@ -1,0 +1,65 @@
+# Render Blueprint — SIH26162 Industrial Thermal Intelligence
+#
+# Architecture:
+#   - Public app URL  -> Next.js frontend (this is what thermaliintelligence.onrender.com serves)
+#   - API service     -> FastAPI backend, separately deployable
+#
+# The frontend is provider-agnostic: with NEXT_PUBLIC_API_URL UNSET it runs in
+# demo mode (seeded offline data) and needs NO backend. So the frontend deploys
+# and serves traffic on its own; the backend is optional for the MVP.
+#
+# Apply by connecting this repo to Render as a Blueprint, or copy these values
+# into each service's dashboard settings. Root Directory MUST be apps/web (web)
+# and apps/api (api) — NEVER the repo root (there is no root package.json / the
+# frontend would fail to build).
+
+services:
+  # --------------------------------------------------------------------------
+  # Public frontend — Next.js (serves the main URL)
+  # --------------------------------------------------------------------------
+  - type: web
+    name: thermaliintelligence
+    runtime: node
+    rootDir: apps/web
+    plan: free
+    buildCommand: npm ci && npm run build
+    # Next.js must bind the port Render provides; default `next start` uses 3000.
+    startCommand: next start -p $PORT
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Optional: point the live frontend at the backend service below.
+      # Leave UNSET for demo mode (seeded data, no backend required).
+      # - key: NEXT_PUBLIC_API_URL
+      #   value: https://sih26162-api.onrender.com
+
+  # --------------------------------------------------------------------------
+  # FastAPI backend — API service (separately deployable)
+  # --------------------------------------------------------------------------
+  - type: web
+    name: sih26162-api
+    runtime: python
+    rootDir: apps/api
+    plan: free
+    # pyproject.toml only (no requirements.txt); editable install is deterministic
+    # thanks to [tool.setuptools] packages=["app"] in pyproject.toml.
+    buildCommand: pip install -e .
+    # Bind 0.0.0.0 on Render's $PORT. The app does NOT connect to the DB at
+    # startup (lifespan yields immediately), so it boots even without a database
+    # — only /api/v1/health/ready reports 503 until Postgres is reachable.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: https://thermaliintelligence.onrender.com
+      # To go live with real data, attach a Render Postgres and set these:
+      # - key: DATABASE_URL
+      #   value: postgresql+asyncpg://USER:PASS@HOST/DB
+      # - key: DATABASE_URL_SYNC
+      #   value: postgresql://USER:PASS@HOST/DB
+      # Then run `alembic upgrade head` (e.g. as a pre-deploy job) to create schema.
