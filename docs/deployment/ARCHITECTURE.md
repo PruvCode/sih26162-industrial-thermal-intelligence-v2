@@ -102,6 +102,23 @@ PostGIS + Redis and is deployed on Docker — it must **not** be the Vercel entr
 
 Notes:
 
+- **CRITICAL — Vercel's dashboard "Root Directory" OVERRIDES `vercel.json`'s `rootDirectory`.**
+  At import, Vercel defaults Root Directory to `.` (repo root) and that dashboard value wins.
+  With Root Directory = `.`, Vercel runs `installCommand`/`buildCommand` at the repo root, where
+  there is **no `package-lock.json`** (this is OPTION B: the only lockfile is
+  `apps/web/package-lock.json`). `npm ci` then fails with
+  `EUSAGE: ... can only install with an existing package-lock.json`. **Fix: set Vercel →
+  Project Settings → General → Root Directory = `apps/web`** (so `rootDirectory` from
+  `vercel.json` is honored and `npm ci` runs where the lockfile is). Do not leave it at `.`.
+- **Determinism:** the frontend is installed with `npm ci` against the committed
+  `apps/web/package-lock.json` (`lockfileVersion: 3`); Vercel auto-detects `npm ci` once the
+  lockfile is in the build dir. `next.config.js` keeps `output:'standalone'` gated behind
+  `STANDALONE_OUTPUT` (unset on Vercel) so Vercel uses its managed build output.
+- **Verified locally** (sandbox bulk-delete guard worked around): `cd apps/web && npm ci`
+  → exit 0, **571 packages added**; `npm run build` → compiled, 4 static pages generated,
+  **18 self-hosted `.woff2` fonts** emitted, `.next/BUILD_ID` present, and **no `.next/standalone`**
+  (correct for Vercel). The only local failure is Vercel-irrelevant: the sandbox blocks
+  `next build`'s final cleanup of the empty legacy `.next/export` dir.
 - Vercel builds `apps/web` in isolation. The frontend is provider-agnostic and defaults to
   `demoProvider` (seeded offline data), so **no backend or API key is required at build time**.
 - `output: 'standalone'` in `next.config.js` is gated behind `STANDALONE_OUTPUT=1` so Vercel
