@@ -25,7 +25,7 @@ Next.js (apps/web)  ──demoProvider (default, offline)──► seeded datase
   │  NEXT_PUBLIC_API_URL set │ apiProvider
   ▼                         ▼
                     FastAPI (apps/api)
-                      │  ├─ /health, /health/ready   (k8s/Docker probes)
+                      │  ├─ /api/v1/health, /api/v1/health/ready   (k8s/Docker probes)
                       │  ├─ /events, /events/{id}/…   (CRUD + evidence + report)
                       │  ├─ /analytics/summary,/density
                       │  └─ /intelligence/persistent-sources,/watchtower
@@ -134,4 +134,4 @@ Notes:
 - Confirm the Vercel project's connected Git repository is exactly
   `PruvCode/sih26162-industrial-thermal-intelligence-v2` on branch `main`; a name mismatch (e.g.
   a `-deploy` suffixed repo) means Vercel is building a different source and this file won't apply.
-- [ ] Health probes wired to `/health` + `/health/ready`.
+- [ ] Health probes wired to `/api/v1/health` (liveness) + `/api/v1/health/ready` (readiness).

@@ -1,0 +1,34 @@
+# Repo-root .dockerignore for the apps/api Docker build (Render build context).
+# Render sends the whole repository as the Docker build context, so exclude
+# everything the backend image does not need — this keeps the context small and
+# prevents secrets / large dirs from being uploaded to the builder.
+
+# Frontend (deployed separately on Vercel) — never needed by the API image.
+apps/web
+
+# Version control + tooling metadata.
+.git
+.workbuddy-ai
+
+# Python caches / virtualenvs / build artifacts.
+**/__pycache__
+**/*.pyc
+**/.venv
+**/.pytest_cache
+**/*.egg-info
+**/.mypy_cache
+**/.ruff_cache
+
+# Node caches (in case frontend creeps into the context).
+**/node_modules
+**/.next
+
+# Secrets — never bake these into an image.
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Misc.
+**/.DS_Store
+**/Thumbs.db
+*.md

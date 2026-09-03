@@ -1,65 +1,85 @@
-# Render Blueprint — SIH26162 Industrial Thermal Intelligence
+# Render Blueprint — SIH26162 Industrial Thermal Intelligence (BACKEND ONLY)
 #
-# Architecture:
-#   - Public app URL  -> Next.js frontend (this is what thermaliintelligence.onrender.com serves)
-#   - API service     -> FastAPI backend, separately deployable
+# DEPLOYMENT ARCHITECTURE (changed):
+#   GitHub ─┬─► Vercel  : frontend (apps/web, Next.js)  — SEE vercel.json
+#           └─► Render  : backend (apps/api, FastAPI)  — THIS FILE
+#                         └─► PostgreSQL + PostGIS
 #
-# The frontend is provider-agnostic: with NEXT_PUBLIC_API_URL UNSET it runs in
-# demo mode (seeded offline data) and needs NO backend. So the frontend deploys
-# and serves traffic on its own; the backend is optional for the MVP.
+# The frontend is NO LONGER deployed by Render. It lives on Vercel, which reads
+# `vercel.json` (rootDirectory: apps/web). This blueprint deploys ONLY the
+# FastAPI backend as a Docker web service.
 #
-# Apply by connecting this repo to Render as a Blueprint, or copy these values
-# into each service's dashboard settings. Root Directory MUST be apps/web (web)
-# and apps/api (api) — NEVER the repo root (there is no root package.json / the
-# frontend would fail to build).
+# Build context note: Render builds Docker from the REPOSITORY ROOT. The
+# `dockerfilePath` below points at apps/api/Dockerfile, but every COPY in that
+# Dockerfile is written relative to the repo root (e.g. `COPY apps/api/...`).
+#
+# IMPORTANT — Docker runtime requires a PAID Render plan:
+#   Render's free tier only supports native (buildpack) runtimes; Docker web
+#   services need at least the `starter` plan. Do not set `plan: free` here.
+#
+# IMPORTANT — the database MUST be PostgreSQL + PostGIS:
+#   The initial migration emits `geometry(POINT, 4326)` columns and does NOT
+#   run `CREATE EXTENSION postgis`. Render's native Postgres add-on does NOT
+#   include PostGIS, so `alembic upgrade head` will fail against it. Provide a
+#   PostGIS database (see DEPLOYMENT.md: a PostGIS Docker private service, or an
+#   external PostGIS provider) and set DATABASE_URL / DATABASE_URL_SYNC below.
 
 services:
   # --------------------------------------------------------------------------
-  # Public frontend — Next.js (serves the main URL)
-  # --------------------------------------------------------------------------
-  - type: web
-    name: thermaliintelligence
-    runtime: node
-    rootDir: apps/web
-    plan: free
-    buildCommand: npm ci && npm run build
-    # Next.js must bind the port Render provides; default `next start` uses 3000.
-    startCommand: next start -p $PORT
-    healthCheckPath: /
-    envVars:
-      - key: NODE_VERSION
-        value: "20"
-      # Optional: point the live frontend at the backend service below.
-      # Leave UNSET for demo mode (seeded data, no backend required).
-      # - key: NEXT_PUBLIC_API_URL
-      #   value: https://sih26162-api.onrender.com
-
-  # --------------------------------------------------------------------------
-  # FastAPI backend — API service (separately deployable)
+  # FastAPI backend — Docker web service (the only thing this blueprint deploys)
   # --------------------------------------------------------------------------
   - type: web
     name: sih26162-api
-    runtime: python
-    rootDir: apps/api
-    plan: free
-    # pyproject.toml only (no requirements.txt); editable install is deterministic
-    # thanks to [tool.setuptools] packages=["app"] in pyproject.toml.
-    buildCommand: pip install -e .
-    # Bind 0.0.0.0 on Render's $PORT. The app does NOT connect to the DB at
-    # startup (lifespan yields immediately), so it boots even without a database
-    # — only /api/v1/health/ready reports 503 until Postgres is reachable.
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    runtime: docker
+    dockerfilePath: apps/api/Dockerfile
+    plan: starter          # Docker runtime is NOT available on the free plan
+    # /api/v1/health returns 200 without a database (liveness probe). See
+    # app/api/v1/endpoints/health.py — do NOT use /api/v1/health/ready here,
+    # that one returns 503 until Postgres is reachable and would fail the check.
     healthCheckPath: /api/v1/health
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.11"
       - key: ENVIRONMENT
-        value: production
+        value: production          # disables Swagger/ReDoc and demo seeding
+      - key: LOG_FORMAT
+        value: json                # structured logs in the Render dashboard
+      - key: TRUST_PROXY_HEADERS
+        value: "true"              # Render terminates TLS and sets X-Forwarded-*
+      # CORS: the browser-facing origin(s) allowed to call this API.
+      # Starlette matches these EXACTLY (no wildcards, because credentials are
+      # allowed).
+      #
+      # CRITICAL FORMAT: this MUST be a JSON ARRAY string, NOT a comma-separated
+      # list. pydantic-settings JSON-decodes complex env fields before the app's
+      # comma-split validator runs, so a bare "https://a,https://b" string
+      # crashes the service at startup (SettingsError). Use the JSON form below
+      # and add your real Vercel domain as an array element.
       - key: CORS_ORIGINS
-        value: https://thermaliintelligence.onrender.com
-      # To go live with real data, attach a Render Postgres and set these:
+        value: '["http://localhost:3000"]'
+        # value: '["https://YOUR-VERCEL-APP.vercel.app","http://localhost:3000"]'
+      # ---- Database (PostgreSQL + PostGIS required) -----------------------
+      # DATABASE_URL uses the ASYNC driver (+asyncpg) — the app talks to it via
+      # asyncpg. DATABASE_URL_SYNC uses the SYNC driver (psycopg) — Alembic needs
+      # it (Alembic cannot drive asyncpg). Point both at your PostGIS instance.
+      # Example for a Render PostGIS private service named "postgis":
       # - key: DATABASE_URL
-      #   value: postgresql+asyncpg://USER:PASS@HOST/DB
+      #   value: postgresql+asyncpg://postgres:postgres@postgis:5432/sih26162_thermal
       # - key: DATABASE_URL_SYNC
-      #   value: postgresql://USER:PASS@HOST/DB
-      # Then run `alembic upgrade head` (e.g. as a pre-deploy job) to create schema.
+      #   value: postgresql://postgres:postgres@postgis:5432/sih26162_thermal
+      # (Leave unset to deploy the container WITHOUT a DB — /api/v1/health still
+      #  returns 200, but /api/v1/health/ready will be 503 and alembic upgrade
+      #  head at boot will fail until these are provided.)
+
+  # --------------------------------------------------------------------------
+  # (Optional) PostGIS database as a Docker private service.
+  # Uncomment to provision the DB from this same blueprint. Requires a paid plan
+  # too. A prebuilt PostGIS image is used; Render volume gives it persistence.
+  # --------------------------------------------------------------------------
+  # - type: pserv
+  #   name: postgis
+  #   runtime: docker
+  #   dockerfilePath: deployments/postgis/Dockerfile   # see DEPLOYMENT.md
+  #   plan: starter
+  #   disk:
+  #     name: postgis-data
+  #     mountPath: /var/lib/postgresql/data
+  #     sizeGB: 10
