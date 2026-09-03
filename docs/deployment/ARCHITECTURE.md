@@ -93,16 +93,16 @@ The repo is a monorepo: the root `pyproject.toml` makes Vercel auto-detect it as
 project, which fails the build (`No python entrypoint found`). The FastAPI backend needs
 PostGIS + Redis and is deployed on Docker — it must **not** be the Vercel entrypoint. The
 
-`vercel.json` at the repo root scopes the build to the Next.js app. Because the Vercel
-**Project Settings → Root Directory** is `.` (repo root) — which overrides `rootDirectory`
-in `vercel.json` — the install/build commands `cd` into `apps/web` themselves so `npm ci`
-finds `apps/web/package-lock.json`:
+`vercel.json` at the repo root scopes the build to the Next.js app. The Vercel
+**Project Settings → Root Directory** must be **`apps/web`** so Vercel runs framework
+detection and the install/build commands inside `apps/web` (where `package.json` declares
+`next` and `package-lock.json` lives):
 
 ```json
-{ "framework": "nextjs",
-  "installCommand": "cd apps/web && npm ci",
-  "buildCommand": "cd apps/web && npm run build",
-  "outputDirectory": "apps/web/.next" }
+{ "rootDirectory": "apps/web",
+  "framework": "nextjs",
+  "installCommand": "npm ci",
+  "buildCommand": "npm run build" }
 ```
 
 Notes:
