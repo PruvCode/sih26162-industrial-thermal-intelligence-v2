@@ -108,6 +108,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # --- Routes ------------------------------------------------------------
     app.include_router(v1_router)
 
+    @app.get("/health", tags=["health"], summary="Liveness probe (unversioned alias)")
+    async def health() -> dict[str, object]:
+        """
+        Liveness at the root, independent of the API version.
+
+        Platforms probe a bare `/health` by convention, while the frontend calls
+        `/api/v1/health`. Same answer, same "do not touch the database" rule —
+        this delegates to the versioned endpoint so the two can never drift.
+        """
+        from app.api.v1.endpoints.health import health_check
+
+        return (await health_check()).model_dump()
+
     @app.get("/", tags=["root"], summary="Service identity")
     async def root() -> dict[str, str]:
         return {
