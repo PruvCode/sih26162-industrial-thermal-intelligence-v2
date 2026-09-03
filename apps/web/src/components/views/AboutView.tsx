@@ -109,8 +109,8 @@ export function AboutView() {
         {/* ── Priority ─────────────────────────────────────────────────── */}
         <Section title="Priority" icon={<Layers3 className="h-3 w-3" />}>
           <p className="mb-3 max-w-[68ch] text-[13px] leading-relaxed text-[#C3CFDD]">
-            Priority is deliberately separate from classification. Class answers "what is it";
-            priority answers "how much should anyone care". It is a 0–100 composite of
+            Priority is deliberately separate from classification. Class answers “what is it”;
+            priority answers “how much should anyone care”. It is a 0–100 composite of
             persistence, industrial proximity, radiative power and contextual exposure.
           </p>
           <ul className="flex flex-wrap gap-2">
