@@ -50,7 +50,7 @@ class PointColumn(TypeDecorator):
     def load_dialect_impl(self, dialect: Dialect):
         if dialect.name == "postgresql":
             return dialect.type_descriptor(
-                Geometry(geometry_type="POINT", srid=4326, management=True)
+                Geometry(geometry_type="POINT", srid=4326)
             )
         return dialect.type_descriptor(Text())
 
