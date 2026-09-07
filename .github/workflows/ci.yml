@@ -281,13 +281,13 @@ jobs:
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
-          head: HEAD
+          base: ${{ github.event.before || '' }}
+          head: ${{ github.event.after || github.sha }}
 
       - name: Run pip-audit (Python deps)
         run: |
           pip install pip-audit
-          pip-audit --requirement apps/api/pyproject.toml --requirement ml/pyproject.toml
+          pip-audit --requirement apps/api/requirements.txt
 
       - name: Run npm audit (Node deps)
         working-directory: ./apps/web
@@ -312,7 +312,7 @@ jobs:
       - name: Build API image
         uses: docker/build-push-action@v5
         with:
-          context: ./apps/api
+          context: .
           file: ./apps/api/Dockerfile
           push: false
           tags: sih26162/api:test
