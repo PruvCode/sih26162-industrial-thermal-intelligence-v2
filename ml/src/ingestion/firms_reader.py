@@ -40,7 +40,6 @@ FIRMS_NUMERIC_COLUMNS: list[str] = [
     "scan",
     "track",
     "confidence",
-    "bright_ti4",
 ]
 
 FIRMS_OPTIONAL_COLUMNS: list[str] = [

@@ -138,7 +138,7 @@ async def get_historical_observations(
 async def seed_mock_events(db: AsyncSession) -> int:
     """Insert realistic Indian industrial thermal events if table is empty."""
     result = await db.execute(select(func.count()).select_from(ThermalEvent))
-    if result.scalar() or 0 > 0:
+    if (result.scalar() or 0) > 0:
         return 0
 
     mock_events = [
