@@ -247,7 +247,7 @@ interface EventProps {
   onSelect: (id: string) => void;
 }
 
-export const EventCard: React.FC<EventProps> = ({ event, onSelect }) => {
+export function EventCard({ event, onSelect }: EventProps) {
   const severity = getSeverityFromClass(event.classification?.class);
   
   return (
@@ -255,8 +255,7 @@ export const EventCard: React.FC<EventProps> = ({ event, onSelect }) => {
       ...
     </Card>
   );
-};
-```
+}
 
 ### SQL (Migrations)
 - **Naming**: `YYYYMMDD_HHMMSS_description.sql`
