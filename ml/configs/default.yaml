@@ -32,7 +32,7 @@ model:
 labels:
   - industrial_fire
   - persistent_thermal_source
-  - natural_or_wildfire
+  - natural_wildfire
   - other
 training:
   test_size: 0.2
