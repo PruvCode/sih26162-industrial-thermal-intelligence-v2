@@ -27,7 +27,7 @@ CREATE TABLE thermal_events (
     acq_datetime    TIMESTAMPTZ NOT NULL,
     satellite       VARCHAR(20) NOT NULL,
     instrument      VARCHAR(20) NOT NULL,
-    confidence      SMALLINT NOT NULL,
+    confidence      VARCHAR(16) NOT NULL,
     daynight        CHAR(1) NOT NULL,
     source          VARCHAR(30) NOT NULL,
     version         VARCHAR(20),
@@ -40,7 +40,7 @@ CREATE TABLE thermal_events (
     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     
     -- Constraints
-    CONSTRAINT valid_confidence CHECK (confidence BETWEEN 0 AND 100),
+    CONSTRAINT valid_confidence CHECK (confidence IN ('low', 'nominal', 'high')),
     CONSTRAINT valid_daynight CHECK (daynight IN ('D', 'N')),
     CONSTRAINT valid_brightness CHECK (brightness > 0 AND brightness < 500),
     CONSTRAINT valid_source CHECK (source IN ('MODIS_NRT', 'VIIRS_SNPP_NRT', 'VIIRS_NOAA20_NRT', 'VIIRS_NOAA21_NRT'))
@@ -192,7 +192,7 @@ CREATE TABLE historical_observations (
     -- Measurements
     acq_datetime    TIMESTAMPTZ NOT NULL,
     brightness      REAL NOT NULL,
-    confidence      SMALLINT NOT NULL,
+    confidence      VARCHAR(16) NOT NULL,
     frp             REAL,
     satellite       VARCHAR(20),
     instrument      VARCHAR(20),
